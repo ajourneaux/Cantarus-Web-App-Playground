@@ -1,0 +1,5 @@
+{
+  "name": "Cantarus Gradient Generator",
+  "description": "A high-performance WebGL-based mesh gradient generator with customisable grain, noise, and industrial aesthetics. Create and export your own Cantarus mesh gradient",
+  "requestFramePermissions": []
+}
