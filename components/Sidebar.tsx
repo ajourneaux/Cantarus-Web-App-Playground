@@ -64,9 +64,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const currentMaxWarpSize = isHighRangeShape ? 3.0 : 1.0;
 
   return (
-    <div className="w-full md:w-80 md:fixed md:right-0 md:top-0 md:h-full bg-[#050505] border-t md:border-t-0 md:border-l border-white/20 text-white font-mono flex flex-col z-50 shadow-2xl overflow-hidden">
+    <div className="w-full md:w-80 md:fixed md:right-0 md:top-0 md:h-full bg-[#050505] border-t md:border-t-0 md:border-l border-white/20 text-white font-mono flex flex-col z-50 shadow-2xl md:overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-white/20 flex items-center justify-between bg-white/5">
+      <div className="p-4 border-b border-white/20 flex items-center justify-between bg-white/5 shrink-0">
         <h1 className="text-sm font-bold tracking-tighter uppercase flex items-center gap-2">
           <FrameIcon /> Cantarus Mesh Lab
         </h1>
@@ -84,8 +84,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto max-h-[120vh] md:max-h-none">
+      {/* Content Area - Scrollable on Desktop, expanded on Mobile */}
+      <div className="md:flex-1 md:overflow-y-auto">
         {/* Global Controls */}
         <div className="p-4 border-b border-white/20 space-y-4">
           <div className="flex items-center justify-between mb-2">
@@ -314,7 +314,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Download size={12} /> PNG
           </button>
           <button onClick={onExportJSON} className="p-2 border border-white/20 text-[10px] uppercase flex flex-col items-center justify-center gap-1 hover:bg-white hover:text-black transition-colors">
-            <Share2 size={12} /> JSON
+            <Share2 size={12} /> LOTTIE
           </button>
           <button onClick={onCopyCSS} className="p-2 border border-white/20 text-[10px] uppercase flex flex-col items-center justify-center gap-1 hover:bg-white hover:text-black transition-colors">
             <Code size={12} /> CSS

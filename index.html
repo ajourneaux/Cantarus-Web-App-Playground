@@ -14,7 +14,13 @@
         padding: 0;
         background-color: #050505;
         font-family: 'JetBrains Mono', monospace;
-        overflow: hidden;
+        overflow-x: hidden;
+      }
+
+      @media (min-width: 768px) {
+        body {
+          overflow: hidden;
+        }
       }
 
       ::-webkit-scrollbar {
