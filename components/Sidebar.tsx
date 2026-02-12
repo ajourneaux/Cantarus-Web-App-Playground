@@ -165,8 +165,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             <div className="flex flex-col gap-1 border-t border-white/5 pt-3">
                <div className="flex justify-between text-[10px] uppercase">
-                <span className={!config.isAnimated ? 'opacity-30' : ''}>Drift Speed</span>
-                <span className={!config.isAnimated ? 'opacity-30' : ''}>{(config.animationSpeed * 10).toFixed(1)}</span>
+                <span className={!config.isAnimated ? 'opacity-30' : ''}>Animation Speed</span>
+                <span className={!config.isAnimated ? 'opacity-30' : ''}>{config.animationSpeed.toFixed(2)}</span>
               </div>
               <input 
                 type="range" min="0" max="1" step="0.01" 

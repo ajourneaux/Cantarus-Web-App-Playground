@@ -21,7 +21,7 @@ export const DEFAULT_POINTS: GradientPoint[] = [
 export const DEFAULT_CONFIG: GlobalConfig = {
   backgroundColor: '#171717',
   noiseStrength: 0.22,
-  animationSpeed: 0.15,
+  animationSpeed: 0.4,
   warp: 0.35,
   warpSize: 0.45,
   warpShape: 0,

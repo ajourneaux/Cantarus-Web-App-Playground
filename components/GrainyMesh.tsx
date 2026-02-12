@@ -57,7 +57,8 @@ const fragmentShader = `
   }
 
   vec2 getDistortion(vec2 p, int shape, float size) {
-    float t = uTime * 0.15;
+    // uTime is already scaled by speed in useFrame
+    float t = uTime * 0.5; 
     if (shape == 0) {
       vec2 q = vec2(fbm(p * size + t), fbm(p * size + 1.0 + t));
       vec2 r = vec2(fbm(p * size + 1.0 * q + 0.17 * t), fbm(p * size + 1.0 * q + 0.12 * t));
@@ -121,6 +122,7 @@ interface PointHandleProps {
   hovered: boolean;
   active: boolean;
   config: GlobalConfig;
+  accumulatedTime: number;
   viewport: { width: number; height: number };
   onPointerOver: () => void;
   onPointerOut: () => void;
@@ -128,21 +130,21 @@ interface PointHandleProps {
 }
 
 const PointHandle: React.FC<PointHandleProps> = ({ 
-  point, index, hovered, active, config, viewport, onPointerOver, onPointerOut, onPointerDown 
+  point, index, hovered, active, config, accumulatedTime, viewport, onPointerOver, onPointerOut, onPointerDown 
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const baseSize = 0.065;
   const scaleX = baseSize / viewport.width;
   const scaleY = baseSize / viewport.height;
 
-  useFrame((state) => {
+  useFrame(() => {
     if (!groupRef.current) return;
     
     let x = point.position[0];
     let y = point.position[1];
     
-    if (config.isDrifting && !active && config.animationSpeed > 0) {
-      const t = state.clock.getElapsedTime() * config.animationSpeed;
+    if (config.isDrifting && !active) {
+      const t = accumulatedTime; 
       x += Math.sin(t * (index + 1) * 0.5) * 0.05;
       y += (Math.cos(t * (index + 1) * 0.7) - 1.0) * 0.05;
     }
@@ -197,6 +199,7 @@ interface GrainyMeshProps {
 
 const GrainyMesh: React.FC<GrainyMeshProps> = ({ points, config, isExporting, onUpdatePoint }) => {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const accumulatedTimeRef = useRef(0);
   const { size, viewport } = useThree();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hoveringId, setHoveringId] = useState<string | null>(null);
@@ -216,10 +219,17 @@ const GrainyMesh: React.FC<GrainyMeshProps> = ({ points, config, isExporting, on
     uNumPoints: { value: points.length }
   }), []);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!materialRef.current) return;
-    if (config.isAnimated) materialRef.current.uniforms.uTime.value = state.clock.getElapsedTime();
 
+    if (config.isAnimated) {
+      // The user wants the previous 0.5 value to be the new maximum (labeled 1.0).
+      // Since the slider goes 0-1, multiplying by 0.5 makes slider 1.0 -> speed 0.5.
+      accumulatedTimeRef.current += delta * config.animationSpeed * 0.5;
+    }
+    
+    const t = accumulatedTimeRef.current;
+    materialRef.current.uniforms.uTime.value = t;
     materialRef.current.uniforms.uNoiseStrength.value = config.noiseStrength;
     materialRef.current.uniforms.uWarp.value = config.warp;
     materialRef.current.uniforms.uWarpSize.value = config.warpSize;
@@ -231,8 +241,7 @@ const GrainyMesh: React.FC<GrainyMeshProps> = ({ points, config, isExporting, on
       if (i < 6) {
         let x = p.position[0];
         let y = p.position[1];
-        if (config.isDrifting && draggingId !== p.id && config.animationSpeed > 0) {
-          const t = state.clock.getElapsedTime() * config.animationSpeed;
+        if (config.isDrifting && draggingId !== p.id) {
           x += Math.sin(t * (i + 1) * 0.5) * 0.05;
           y += (Math.cos(t * (i + 1) * 0.7) - 1.0) * 0.05;
         }
@@ -272,6 +281,7 @@ const GrainyMesh: React.FC<GrainyMeshProps> = ({ points, config, isExporting, on
               hovered={hoveringId === p.id}
               active={draggingId === p.id}
               config={config}
+              accumulatedTime={accumulatedTimeRef.current}
               viewport={viewport}
               onPointerOver={() => setHoveringId(p.id)}
               onPointerOut={() => setHoveringId(null)}
