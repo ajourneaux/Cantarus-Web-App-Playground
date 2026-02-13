@@ -64,7 +64,7 @@ const App: React.FC = () => {
     setConfig(prev => ({ ...prev, ...updates }));
   }, []);
 
-  const handleExportWebP = useCallback(() => {
+  const handleExportPNG = useCallback(() => {
     if (!threeRef.current) return;
     const { gl, scene, camera } = threeRef.current;
     setIsExporting(true);
@@ -83,10 +83,9 @@ const App: React.FC = () => {
       gl.setSize(finalWidth, finalHeight, false);
       gl.render(scene, camera);
       
-      // WebP at 0.8 quality offers significantly better compression for gradients than JPEG 0.85
-      const dataUrl = gl.domElement.toDataURL('image/webp', 0.8);
+      const dataUrl = gl.domElement.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = `cantarus-mesh-${exportConfig.format.toLowerCase()}-${exportConfig.multiplier}x-${Date.now()}.webp`;
+      link.download = `cantarus-mesh-${exportConfig.format.toLowerCase()}-${exportConfig.multiplier}x-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
       
@@ -281,7 +280,7 @@ const App: React.FC = () => {
           onRemovePoint={handleRemovePoint}
           onUpdateConfig={handleUpdateConfig}
           onUpdateExportConfig={(updates) => setExportConfig(prev => ({ ...prev, ...updates }))}
-          onExportWebP={handleExportWebP}
+          onExportPNG={handleExportPNG}
           onExportJSON={handleExportLottie}
           onCopyCSS={handleCopyCSS}
           onGeneratePalette={handleGeneratePalette}

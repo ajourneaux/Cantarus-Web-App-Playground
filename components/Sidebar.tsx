@@ -13,7 +13,7 @@ interface SidebarProps {
   onRemovePoint: (id: string) => void;
   onUpdateConfig: (updates: Partial<GlobalConfig>) => void;
   onUpdateExportConfig: (updates: Partial<ExportConfig>) => void;
-  onExportWebP: () => void;
+  onExportPNG: () => void;
   onExportJSON: () => void;
   onCopyCSS: () => void;
   onGeneratePalette: () => void;
@@ -44,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onRemovePoint,
   onUpdateConfig,
   onUpdateExportConfig,
-  onExportWebP,
+  onExportPNG,
   onExportJSON,
   onCopyCSS,
   onGeneratePalette
@@ -280,10 +280,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         {isImageMenuOpen && (
           <div className="mb-4 p-4 bg-white text-black border border-white">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[10px] uppercase font-bold flex items-center gap-1"><Download size={10} /> WEBP Settings</h2>
+              <h2 className="text-[10px] uppercase font-bold flex items-center gap-1"><Download size={10} /> PNG Settings</h2>
               <button onClick={() => setIsImageMenuOpen(false)}><X size={12} strokeWidth={3} /></button>
             </div>
-            <p className="text-[8px] uppercase mb-3 opacity-60">Optimized Web Format (Smallest Size)</p>
+            <p className="text-[8px] uppercase mb-3 opacity-60">High-Quality Lossless PNG</p>
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-1">
                 {FORMATS.map(f => (
@@ -300,8 +300,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                 ))}
               </div>
-              <button onClick={() => { onExportWebP(); setIsImageMenuOpen(false); }} className="w-full p-3 bg-black text-white text-[10px] font-bold uppercase active:scale-95 transition-all">
-                EXPORT WEBP
+              <button onClick={() => { onExportPNG(); setIsImageMenuOpen(false); }} className="w-full p-3 bg-black text-white text-[10px] font-bold uppercase active:scale-95 transition-all">
+                EXPORT PNG
               </button>
             </div>
           </div>
@@ -312,7 +312,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => setIsImageMenuOpen(!isImageMenuOpen)}
             className={`p-2 border text-[10px] uppercase flex flex-col items-center justify-center gap-1 transition-colors ${isImageMenuOpen ? 'bg-white text-black border-white' : 'border-white/20 hover:bg-white hover:text-black'}`}
           >
-            <Download size={12} /> WEBP
+            <Download size={12} /> PNG
           </button>
           <button onClick={onExportJSON} className="p-2 border border-white/20 text-[10px] uppercase flex flex-col items-center justify-center gap-1 hover:bg-white hover:text-black transition-colors">
             <Share2 size={12} /> LOTTIE
