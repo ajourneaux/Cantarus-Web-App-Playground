@@ -64,7 +64,7 @@ const App: React.FC = () => {
     setConfig(prev => ({ ...prev, ...updates }));
   }, []);
 
-  const handleExportPNG = useCallback(() => {
+  const handleExportWebP = useCallback(() => {
     if (!threeRef.current) return;
     const { gl, scene, camera } = threeRef.current;
     setIsExporting(true);
@@ -82,11 +82,14 @@ const App: React.FC = () => {
       gl.getSize(originalSize);
       gl.setSize(finalWidth, finalHeight, false);
       gl.render(scene, camera);
-      const dataUrl = gl.domElement.toDataURL('image/png');
+      
+      // WebP at 0.8 quality offers significantly better compression for gradients than JPEG 0.85
+      const dataUrl = gl.domElement.toDataURL('image/webp', 0.8);
       const link = document.createElement('a');
-      link.download = `cantarus-mesh-${exportConfig.format.toLowerCase()}-${exportConfig.multiplier}x-${Date.now()}.png`;
+      link.download = `cantarus-mesh-${exportConfig.format.toLowerCase()}-${exportConfig.multiplier}x-${Date.now()}.webp`;
       link.href = dataUrl;
       link.click();
+      
       gl.setSize(originalSize.x, originalSize.y, false);
       setIsExporting(false);
     }, 100);
@@ -101,7 +104,6 @@ const App: React.FC = () => {
 
     const bgRgb = hexToRgb(config.backgroundColor);
 
-    // Lottie Base Structure
     const lottie = {
       v: "5.7.1",
       fr: FPS,
@@ -115,11 +117,10 @@ const App: React.FC = () => {
       layers: [] as any[]
     };
 
-    // Background Layer
     lottie.layers.push({
       ddd: 0,
       ind: 1,
-      ty: 1, // Solid
+      ty: 1,
       nm: "Background",
       sr: 1,
       ks: {
@@ -137,13 +138,12 @@ const App: React.FC = () => {
       st: 0
     });
 
-    // Point Layers
     points.forEach((p, idx) => {
       const pRgb = hexToRgb(p.color);
       const kf = [];
       
       for (let i = 0; i <= TOTAL_FRAMES; i++) {
-        const t = (i / FPS) * config.animationSpeed * 0.5; // Same as shader speed logic
+        const t = (i / FPS) * config.animationSpeed * 0.5;
         let x = p.position[0];
         let y = p.position[1];
 
@@ -154,7 +154,7 @@ const App: React.FC = () => {
 
         kf.push({
           t: i,
-          s: [x * W, (1 - y) * H, 0], // Invert Y for Lottie coord system
+          s: [x * W, (1 - y) * H, 0],
           i: { x: 0.833, y: 0.833 },
           o: { x: 0.167, y: 0.167 }
         });
@@ -163,7 +163,7 @@ const App: React.FC = () => {
       lottie.layers.push({
         ddd: 0,
         ind: idx + 2,
-        ty: 4, // Shape Layer
+        ty: 4,
         nm: `Point ${idx + 1}`,
         sr: 1,
         ks: {
@@ -180,13 +180,13 @@ const App: React.FC = () => {
             it: [
               {
                 d: 1,
-                ty: "el", // Ellipse
+                ty: "el",
                 s: { a: 0, k: [W * p.radius * 2, W * p.radius * 2] },
                 p: { a: 0, k: [0, 0] },
                 nm: "Ellipse Path"
               },
               {
-                ty: "gf", // Gradient Fill
+                ty: "gf",
                 o: { a: 0, k: 100 },
                 r: 1,
                 g: {
@@ -198,7 +198,7 @@ const App: React.FC = () => {
                 },
                 s: { a: 0, k: [0, 0] },
                 e: { a: 0, k: [W * p.radius, 0] },
-                t: 2, // Radial
+                t: 2,
                 nm: "Gradient Fill"
               }
             ]
@@ -281,7 +281,7 @@ const App: React.FC = () => {
           onRemovePoint={handleRemovePoint}
           onUpdateConfig={handleUpdateConfig}
           onUpdateExportConfig={(updates) => setExportConfig(prev => ({ ...prev, ...updates }))}
-          onExportPNG={handleExportPNG}
+          onExportWebP={handleExportWebP}
           onExportJSON={handleExportLottie}
           onCopyCSS={handleCopyCSS}
           onGeneratePalette={handleGeneratePalette}
