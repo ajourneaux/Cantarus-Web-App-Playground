@@ -56,7 +56,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   
   const MAX_POINTS = 5;
   const WARP_SHAPES = ["FLOW", "LIQUID", "ROWS", "COLUMNS"];
-  const MULTIPLIERS = [1, 2, 3, 4];
   const DURATIONS: ExportDuration[] = [5, 10, 15];
   const FORMATS: { id: ExportFormat; label: string; icon: any }[] = [
     { id: 'LANDSCAPE', label: 'Landscape', icon: Layout },
@@ -301,13 +300,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-4 gap-1">
-                {MULTIPLIERS.map(m => (
-                  <button key={m} onClick={() => onUpdateExportConfig({ multiplier: m })} className={`p-1.5 border text-[10px] font-bold transition-all ${exportConfig.multiplier === m ? 'bg-black text-white' : 'border-black/20 hover:bg-black/5'}`}>
-                    {m}X
-                  </button>
-                ))}
-              </div>
               <button onClick={() => { onExportPNG(); setIsImageMenuOpen(false); }} className="w-full p-3 bg-black text-white text-[10px] font-bold uppercase active:scale-95 transition-all">
                 EXPORT PNG
               </button>
@@ -322,7 +314,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <h2 className="text-[10px] uppercase font-bold flex items-center gap-1"><Film size={10} /> MP4 Settings</h2>
               <button onClick={() => setIsVideoMenuOpen(false)}><X size={12} strokeWidth={3} /></button>
             </div>
-            <p className="text-[8px] uppercase mb-3 opacity-60">ProRes Style High-Bitrate MP4</p>
+            <p className="text-[8px] uppercase mb-3 opacity-60">High-Bitrate Smooth Motion</p>
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-1">
                 {FORMATS.map(f => (
@@ -346,14 +338,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-1">
-                {MULTIPLIERS.map(m => (
-                  <button key={m} onClick={() => onUpdateExportConfig({ multiplier: m })} className={`p-1.5 border text-[10px] font-bold transition-all ${exportConfig.multiplier === m ? 'bg-black text-white' : 'border-black/20 hover:bg-black/5'}`}>
-                    {m}X
-                  </button>
-                ))}
-              </div>
-              
               <button onClick={() => { onExportMP4(); setIsVideoMenuOpen(false); }} className="w-full p-3 bg-black text-white text-[10px] font-bold uppercase active:scale-95 transition-all">
                 RECORD MP4
               </button>

@@ -26,7 +26,6 @@ const App: React.FC = () => {
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [exportConfig, setExportConfig] = useState<ExportConfig>({
     format: 'LANDSCAPE',
-    multiplier: 1,
     duration: 5
   });
   
@@ -78,18 +77,15 @@ const App: React.FC = () => {
     if (exportConfig.format === 'SQUARE') { baseWidth = 1080; baseHeight = 1080; }
     else if (exportConfig.format === 'PORTRAIT') { baseWidth = 1080; baseHeight = 1920; }
     
-    const finalWidth = baseWidth * exportConfig.multiplier;
-    const finalHeight = baseHeight * exportConfig.multiplier;
-
     setTimeout(() => {
       const originalSize = new THREE.Vector2();
       gl.getSize(originalSize);
-      gl.setSize(finalWidth, finalHeight, false);
+      gl.setSize(baseWidth, baseHeight, false);
       gl.render(scene, camera);
       
       const dataUrl = gl.domElement.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = `cantarus-mesh-${exportConfig.format.toLowerCase()}-${exportConfig.multiplier}x-${Date.now()}.png`;
+      link.download = `cantarus-mesh-${exportConfig.format.toLowerCase()}-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
       
@@ -110,20 +106,14 @@ const App: React.FC = () => {
     if (exportConfig.format === 'SQUARE') { baseWidth = 1080; baseHeight = 1080; }
     else if (exportConfig.format === 'PORTRAIT') { baseWidth = 1080; baseHeight = 1920; }
     
-    const finalWidth = baseWidth * exportConfig.multiplier;
-    const finalHeight = baseHeight * exportConfig.multiplier;
-    
     const originalSize = new THREE.Vector2();
     gl.getSize(originalSize);
     const originalPixelRatio = gl.getPixelRatio();
 
     // Reset renderer for capture
     gl.setPixelRatio(1);
-    gl.setSize(finalWidth, finalHeight, false);
+    gl.setSize(baseWidth, baseHeight, false);
     
-    // Select the most compatible High Quality MIME type
-    // We prioritize actual MP4 support if the browser allows it, 
-    // otherwise fallback to WebM with H264 which is widely playable.
     const mimeTypes = [
       'video/mp4;codecs=avc1',
       'video/mp4',
@@ -135,8 +125,8 @@ const App: React.FC = () => {
     const supportedMimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || 'video/webm';
     const extension = supportedMimeType.includes('mp4') ? 'mp4' : 'webm';
     
-    // 20Mbps is a safe sweet spot for high-quality grain without overwhelming the encoder
-    const bitRate = 20000000 * exportConfig.multiplier;
+    // 25Mbps high-quality bitrate
+    const bitRate = 25000000;
     
     const stream = gl.domElement.captureStream(30);
     const recorder = new MediaRecorder(stream, {
@@ -154,11 +144,9 @@ const App: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      // Use correct extension to ensure players recognize the container
-      link.download = `cantarus-motion-${exportConfig.format.toLowerCase()}-${exportConfig.multiplier}x-${Date.now()}.${extension}`;
+      link.download = `cantarus-motion-${exportConfig.format.toLowerCase()}-${Date.now()}.${extension}`;
       link.click();
       
-      // Cleanup
       setTimeout(() => URL.revokeObjectURL(url), 100);
       gl.setPixelRatio(originalPixelRatio);
       gl.setSize(originalSize.x, originalSize.y, false);
@@ -166,7 +154,6 @@ const App: React.FC = () => {
       setExportProgress(0);
     };
 
-    // Wait for canvas to settle at new resolution
     setTimeout(() => {
       recorder.start();
       const durationMs = (exportConfig.duration || 5) * 1000;
