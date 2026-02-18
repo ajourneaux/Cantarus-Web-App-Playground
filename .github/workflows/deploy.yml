@@ -1,8 +1,8 @@
-name: Deploy Vite Site
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main"] # Or "master" depending on your repo
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,10 @@ permissions:
   id-token: write
 
 jobs:
-  build-and-deploy:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
