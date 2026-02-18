@@ -19,10 +19,12 @@ export interface GlobalConfig {
 }
 
 export type ExportFormat = 'LANDSCAPE' | 'SQUARE' | 'PORTRAIT';
+export type ExportDuration = 5 | 10 | 15;
 
 export interface ExportConfig {
   format: ExportFormat;
   multiplier: number;
+  duration?: ExportDuration;
 }
 
 export interface Uniforms {

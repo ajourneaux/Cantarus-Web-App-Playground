@@ -1,9 +1,10 @@
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import GrainyMesh from './components/GrainyMesh';
 import Sidebar from './components/Sidebar';
+import CodeModal from './components/CodeModal';
 import { GradientPoint, GlobalConfig, ExportConfig } from './types';
 import { generateId, DEFAULT_POINTS, DEFAULT_CONFIG, ALLOWED_COLORS, hexToRgb } from './utils/color';
 
@@ -21,9 +22,12 @@ const ExportHelper = ({ onExportReady }: { onExportReady: (gl: THREE.WebGLRender
 const App: React.FC = () => {
   const [points, setPoints] = useState<GradientPoint[]>(DEFAULT_POINTS);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [showCodeModal, setShowCodeModal] = useState(false);
   const [exportConfig, setExportConfig] = useState<ExportConfig>({
     format: 'LANDSCAPE',
-    multiplier: 1
+    multiplier: 1,
+    duration: 5
   });
   
   const [config, setConfig] = useState<GlobalConfig>(DEFAULT_CONFIG);
@@ -91,144 +95,100 @@ const App: React.FC = () => {
       
       gl.setSize(originalSize.x, originalSize.y, false);
       setIsExporting(false);
-    }, 100);
+    }, 150);
   }, [exportConfig]);
 
-  const handleExportLottie = useCallback(() => {
-    const W = 1920;
-    const H = 1080;
-    const FPS = 30;
-    const DURATION_SEC = 10;
-    const TOTAL_FRAMES = FPS * DURATION_SEC;
+  const handleExportMP4 = useCallback(() => {
+    if (!threeRef.current) return;
+    const { gl, scene, camera } = threeRef.current;
+    
+    setIsExporting(true);
+    setExportProgress(0.1);
 
-    const bgRgb = hexToRgb(config.backgroundColor);
+    let baseWidth = 1920;
+    let baseHeight = 1080;
+    if (exportConfig.format === 'SQUARE') { baseWidth = 1080; baseHeight = 1080; }
+    else if (exportConfig.format === 'PORTRAIT') { baseWidth = 1080; baseHeight = 1920; }
+    
+    const finalWidth = baseWidth * exportConfig.multiplier;
+    const finalHeight = baseHeight * exportConfig.multiplier;
+    
+    const originalSize = new THREE.Vector2();
+    gl.getSize(originalSize);
+    const originalPixelRatio = gl.getPixelRatio();
 
-    const lottie = {
-      v: "5.7.1",
-      fr: FPS,
-      ip: 0,
-      op: TOTAL_FRAMES,
-      w: W,
-      h: H,
-      nm: "Cantarus Mesh Export",
-      ddd: 0,
-      assets: [],
-      layers: [] as any[]
+    // Reset renderer for capture
+    gl.setPixelRatio(1);
+    gl.setSize(finalWidth, finalHeight, false);
+    
+    // Select the most compatible High Quality MIME type
+    // We prioritize actual MP4 support if the browser allows it, 
+    // otherwise fallback to WebM with H264 which is widely playable.
+    const mimeTypes = [
+      'video/mp4;codecs=avc1',
+      'video/mp4',
+      'video/webm;codecs=h264',
+      'video/webm;codecs=vp9',
+      'video/webm'
+    ];
+    
+    const supportedMimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || 'video/webm';
+    const extension = supportedMimeType.includes('mp4') ? 'mp4' : 'webm';
+    
+    // 20Mbps is a safe sweet spot for high-quality grain without overwhelming the encoder
+    const bitRate = 20000000 * exportConfig.multiplier;
+    
+    const stream = gl.domElement.captureStream(30);
+    const recorder = new MediaRecorder(stream, {
+      mimeType: supportedMimeType,
+      videoBitsPerSecond: bitRate
+    });
+
+    const chunks: Blob[] = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
     };
 
-    lottie.layers.push({
-      ddd: 0,
-      ind: 1,
-      ty: 1,
-      nm: "Background",
-      sr: 1,
-      ks: {
-        o: { a: 0, k: 100 },
-        r: { a: 0, k: 0 },
-        p: { a: 0, k: [W / 2, H / 2, 0] },
-        a: { a: 0, k: [W / 2, H / 2, 0] },
-        s: { a: 0, k: [100, 100, 100] }
-      },
-      sw: W,
-      sh: H,
-      sc: config.backgroundColor,
-      ip: 0,
-      op: TOTAL_FRAMES,
-      st: 0
-    });
-
-    points.forEach((p, idx) => {
-      const pRgb = hexToRgb(p.color);
-      const kf = [];
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: supportedMimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      // Use correct extension to ensure players recognize the container
+      link.download = `cantarus-motion-${exportConfig.format.toLowerCase()}-${exportConfig.multiplier}x-${Date.now()}.${extension}`;
+      link.click();
       
-      for (let i = 0; i <= TOTAL_FRAMES; i++) {
-        const t = (i / FPS) * config.animationSpeed * 0.5;
-        let x = p.position[0];
-        let y = p.position[1];
+      // Cleanup
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      gl.setPixelRatio(originalPixelRatio);
+      gl.setSize(originalSize.x, originalSize.y, false);
+      setIsExporting(false);
+      setExportProgress(0);
+    };
 
-        if (config.isDrifting) {
-          x += Math.sin(t * (idx + 1) * 0.5) * 0.05;
-          y += (Math.cos(t * (idx + 1) * 0.7) - 1.0) * 0.05;
+    // Wait for canvas to settle at new resolution
+    setTimeout(() => {
+      recorder.start();
+      const durationMs = (exportConfig.duration || 5) * 1000;
+      const startTime = Date.now();
+
+      const updateInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min((elapsed / durationMs) * 100, 100);
+        setExportProgress(progress);
+        
+        if (elapsed >= durationMs) {
+          clearInterval(updateInterval);
+          recorder.stop();
         }
+      }, 50);
+    }, 500);
 
-        kf.push({
-          t: i,
-          s: [x * W, (1 - y) * H, 0],
-          i: { x: 0.833, y: 0.833 },
-          o: { x: 0.167, y: 0.167 }
-        });
-      }
+  }, [exportConfig]);
 
-      lottie.layers.push({
-        ddd: 0,
-        ind: idx + 2,
-        ty: 4,
-        nm: `Point ${idx + 1}`,
-        sr: 1,
-        ks: {
-          o: { a: 0, k: p.intensity * 100 },
-          r: { a: 0, k: 0 },
-          p: { a: 1, k: kf },
-          a: { a: 0, k: [0, 0, 0] },
-          s: { a: 0, k: [100, 100, 100] }
-        },
-        ao: 0,
-        shapes: [
-          {
-            ty: "gr",
-            it: [
-              {
-                d: 1,
-                ty: "el",
-                s: { a: 0, k: [W * p.radius * 2, W * p.radius * 2] },
-                p: { a: 0, k: [0, 0] },
-                nm: "Ellipse Path"
-              },
-              {
-                ty: "gf",
-                o: { a: 0, k: 100 },
-                r: 1,
-                g: {
-                  p: 2,
-                  k: {
-                    a: 0,
-                    k: [0, pRgb[0], pRgb[1], pRgb[2], 1, pRgb[0], pRgb[1], pRgb[2]]
-                  }
-                },
-                s: { a: 0, k: [0, 0] },
-                e: { a: 0, k: [W * p.radius, 0] },
-                t: 2,
-                nm: "Gradient Fill"
-              }
-            ]
-          }
-        ],
-        ip: 0,
-        op: TOTAL_FRAMES,
-        st: 0
-      });
-    });
-
-    const data = JSON.stringify(lottie, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.download = `cantarus-lottie-${Date.now()}.json`;
-    link.href = url;
-    link.click();
-    URL.revokeObjectURL(url);
-  }, [points, config]);
-
-  const handleCopyCSS = useCallback(() => {
-    const gradients = points.map(p => {
-      const x = (p.position[0] * 100).toFixed(1);
-      const y = (p.position[1] * 100).toFixed(1);
-      return `radial-gradient(at ${x}% ${y}%, ${p.color} 0px, transparent 50%)`;
-    }).join(', ');
-    const css = `background-color: ${config.backgroundColor};\nbackground-image: ${gradients};`;
-    navigator.clipboard.writeText(css);
-    alert('CSS Fallback copied to clipboard!');
-  }, [points, config.backgroundColor]);
+  const handleExportJSON = useCallback(() => {
+    console.log("JSON export not active.");
+  }, []);
 
   const handleGeneratePalette = async () => {
     const numToGenerate = 2 + Math.floor(Math.random() * (MAX_POINTS - 1));
@@ -245,6 +205,14 @@ const App: React.FC = () => {
     }
     setPoints(newPoints);
   };
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowCodeModal(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   return (
     <main className="w-full h-auto min-h-screen bg-[#050505] relative overflow-x-hidden md:overflow-hidden flex flex-col md:block">
@@ -270,6 +238,45 @@ const App: React.FC = () => {
         </Canvas>
       </div>
 
+      {isExporting && exportProgress > 0 && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/90 backdrop-blur-xl text-white font-mono">
+          <div className="w-80 border border-white/20 p-10 space-y-8 shadow-[0_0_100px_rgba(255,255,255,0.05)] bg-[#0A0A0A]">
+            <div className="space-y-3">
+              <h3 className="text-[9px] font-bold uppercase tracking-[0.5em] text-center text-white/40">Cantarus Rendering Engine</h3>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-center flex items-center justify-center gap-3">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                {exportProgress < 100 ? 'Recording Motion' : 'Saving File'}
+              </h4>
+            </div>
+            
+            <div className="relative pt-1">
+              <div className="flex mb-2 items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-semibold inline-block py-1 px-2 uppercase rounded-full text-black bg-white">
+                    {exportProgress < 100 ? 'Live' : 'Done'}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-semibold inline-block text-white/60">
+                    {exportProgress.toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+              <div className="overflow-hidden h-1 text-xs flex bg-white/10">
+                <div 
+                  style={{ width: `${exportProgress}%` }} 
+                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-white transition-all duration-300"
+                />
+              </div>
+            </div>
+            
+            <p className="text-[9px] uppercase tracking-tighter text-white/30 text-center">
+              Encoding high-fidelity stream...
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="relative z-10 md:static shrink-0">
         <Sidebar 
           points={points}
@@ -281,11 +288,20 @@ const App: React.FC = () => {
           onUpdateConfig={handleUpdateConfig}
           onUpdateExportConfig={(updates) => setExportConfig(prev => ({ ...prev, ...updates }))}
           onExportPNG={handleExportPNG}
-          onExportJSON={handleExportLottie}
-          onCopyCSS={handleCopyCSS}
+          onExportMP4={handleExportMP4}
+          onExportJSON={handleExportJSON}
+          onShowCode={() => setShowCodeModal(true)}
           onGeneratePalette={handleGeneratePalette}
         />
       </div>
+
+      {showCodeModal && (
+        <CodeModal 
+          config={config} 
+          points={points} 
+          onClose={() => setShowCodeModal(false)} 
+        />
+      )}
     </main>
   );
 };

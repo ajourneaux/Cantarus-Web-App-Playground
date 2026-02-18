@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Download, Code, Share2, Zap, RefreshCw, Layout, Square, Smartphone, RotateCcw, X } from 'lucide-react';
-import { GradientPoint, GlobalConfig, ExportConfig, ExportFormat } from '../types';
+import { Plus, Trash2, Download, Code, Share2, Zap, RefreshCw, Layout, Square, Smartphone, RotateCcw, X, Code2, Film, Clock } from 'lucide-react';
+import { GradientPoint, GlobalConfig, ExportConfig, ExportFormat, ExportDuration } from '../types';
 import { ALLOWED_COLORS, DEFAULT_CONFIG } from '../utils/color';
 
 interface SidebarProps {
@@ -14,8 +14,9 @@ interface SidebarProps {
   onUpdateConfig: (updates: Partial<GlobalConfig>) => void;
   onUpdateExportConfig: (updates: Partial<ExportConfig>) => void;
   onExportPNG: () => void;
+  onExportMP4: () => void;
   onExportJSON: () => void;
-  onCopyCSS: () => void;
+  onShowCode: () => void;
   onGeneratePalette: () => void;
 }
 
@@ -45,15 +46,18 @@ const Sidebar: React.FC<SidebarProps> = ({
   onUpdateConfig,
   onUpdateExportConfig,
   onExportPNG,
+  onExportMP4,
   onExportJSON,
-  onCopyCSS,
+  onShowCode,
   onGeneratePalette
 }) => {
   const [isImageMenuOpen, setIsImageMenuOpen] = useState(false);
+  const [isVideoMenuOpen, setIsVideoMenuOpen] = useState(false);
   
   const MAX_POINTS = 5;
   const WARP_SHAPES = ["FLOW", "LIQUID", "ROWS", "COLUMNS"];
   const MULTIPLIERS = [1, 2, 3, 4];
+  const DURATIONS: ExportDuration[] = [5, 10, 15];
   const FORMATS: { id: ExportFormat; label: string; icon: any }[] = [
     { id: 'LANDSCAPE', label: 'Landscape', icon: Layout },
     { id: 'SQUARE', label: 'Square', icon: Square },
@@ -75,6 +79,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => {
               const newState = !config.isAnimated;
               onUpdateConfig({ isAnimated: newState, isDrifting: newState });
+              // If we stop animation, force close the MP4 menu as it's no longer valid
+              if (!newState) setIsVideoMenuOpen(false);
             }}
             title={config.isAnimated ? "Freeze Everything" : "Animate Everything"}
             className={`p-1.5 border border-white/20 transition-colors ${config.isAnimated ? 'bg-white text-black' : 'hover:bg-white/10'}`}
@@ -84,7 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Content Area - Scrollable on Desktop, expanded on Mobile */}
+      {/* Content Area */}
       <div className="md:flex-1 md:overflow-y-auto">
         {/* Global Controls */}
         <div className="p-4 border-b border-white/20 space-y-4">
@@ -187,6 +193,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button 
                 onClick={onGeneratePalette}
                 className="p-1 border border-white/20 hover:bg-white hover:text-black transition-colors"
+                title="Randomize Points"
               >
                 <RefreshCw size={12} />
               </button>
@@ -277,17 +284,18 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer / Export Actions */}
       <div className="bg-[#050505] border-t border-white/20 p-4 shrink-0">
+        {/* PNG Menu */}
         {isImageMenuOpen && (
-          <div className="mb-4 p-4 bg-white text-black border border-white">
+          <div className="mb-4 p-4 bg-white text-black border border-white shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-[10px] uppercase font-bold flex items-center gap-1"><Download size={10} /> PNG Settings</h2>
               <button onClick={() => setIsImageMenuOpen(false)}><X size={12} strokeWidth={3} /></button>
             </div>
-            <p className="text-[8px] uppercase mb-3 opacity-60">High-Quality Lossless PNG</p>
+            <p className="text-[8px] uppercase mb-3 opacity-60">High-Quality Lossless Still</p>
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-1">
                 {FORMATS.map(f => (
-                  <button key={f.id} onClick={() => onUpdateExportConfig({ format: f.id })} className={`flex flex-col items-center justify-center p-2 border ${exportConfig.format === f.id ? 'bg-black text-white' : 'border-black/20'}`}>
+                  <button key={f.id} onClick={() => onUpdateExportConfig({ format: f.id })} className={`flex flex-col items-center justify-center p-2 border transition-all ${exportConfig.format === f.id ? 'bg-black text-white' : 'border-black/20 hover:bg-black/5'}`}>
                     <f.icon size={14} className="mb-1" />
                     <span className="text-[8px] uppercase font-bold">{f.label}</span>
                   </button>
@@ -295,7 +303,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <div className="grid grid-cols-4 gap-1">
                 {MULTIPLIERS.map(m => (
-                  <button key={m} onClick={() => onUpdateExportConfig({ multiplier: m })} className={`p-1.5 border text-[10px] font-bold ${exportConfig.multiplier === m ? 'bg-black text-white' : 'border-black/20'}`}>
+                  <button key={m} onClick={() => onUpdateExportConfig({ multiplier: m })} className={`p-1.5 border text-[10px] font-bold transition-all ${exportConfig.multiplier === m ? 'bg-black text-white' : 'border-black/20 hover:bg-black/5'}`}>
                     {m}X
                   </button>
                 ))}
@@ -307,18 +315,70 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
+        {/* MP4 Menu - Only interactive if animated */}
+        {isVideoMenuOpen && config.isAnimated && (
+          <div className="mb-4 p-4 bg-white text-black border border-white shadow-xl">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[10px] uppercase font-bold flex items-center gap-1"><Film size={10} /> MP4 Settings</h2>
+              <button onClick={() => setIsVideoMenuOpen(false)}><X size={12} strokeWidth={3} /></button>
+            </div>
+            <p className="text-[8px] uppercase mb-3 opacity-60">ProRes Style High-Bitrate MP4</p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-1">
+                {FORMATS.map(f => (
+                  <button key={f.id} onClick={() => onUpdateExportConfig({ format: f.id })} className={`flex flex-col items-center justify-center p-2 border transition-all ${exportConfig.format === f.id ? 'bg-black text-white' : 'border-black/20 hover:bg-black/5'}`}>
+                    <f.icon size={14} className="mb-1" />
+                    <span className="text-[8px] uppercase font-bold">{f.label}</span>
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex flex-col gap-1">
+                <label className="text-[8px] font-bold uppercase flex items-center gap-1 opacity-60">
+                  <Clock size={8} /> Duration
+                </label>
+                <div className="grid grid-cols-3 gap-1">
+                  {DURATIONS.map(d => (
+                    <button key={d} onClick={() => onUpdateExportConfig({ duration: d })} className={`p-1.5 border text-[10px] font-bold transition-all ${exportConfig.duration === d ? 'bg-black text-white' : 'border-black/20 hover:bg-black/5'}`}>
+                      {d}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-1">
+                {MULTIPLIERS.map(m => (
+                  <button key={m} onClick={() => onUpdateExportConfig({ multiplier: m })} className={`p-1.5 border text-[10px] font-bold transition-all ${exportConfig.multiplier === m ? 'bg-black text-white' : 'border-black/20 hover:bg-black/5'}`}>
+                    {m}X
+                  </button>
+                ))}
+              </div>
+              
+              <button onClick={() => { onExportMP4(); setIsVideoMenuOpen(false); }} className="w-full p-3 bg-black text-white text-[10px] font-bold uppercase active:scale-95 transition-all">
+                RECORD MP4
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-2">
           <button 
-            onClick={() => setIsImageMenuOpen(!isImageMenuOpen)}
+            onClick={() => { setIsImageMenuOpen(!isImageMenuOpen); setIsVideoMenuOpen(false); }}
             className={`p-2 border text-[10px] uppercase flex flex-col items-center justify-center gap-1 transition-colors ${isImageMenuOpen ? 'bg-white text-black border-white' : 'border-white/20 hover:bg-white hover:text-black'}`}
           >
             <Download size={12} /> PNG
           </button>
-          <button onClick={onExportJSON} className="p-2 border border-white/20 text-[10px] uppercase flex flex-col items-center justify-center gap-1 hover:bg-white hover:text-black transition-colors">
-            <Share2 size={12} /> LOTTIE
+          
+          <button 
+            disabled={!config.isAnimated}
+            onClick={() => { setIsVideoMenuOpen(!isVideoMenuOpen); setIsImageMenuOpen(false); }}
+            className={`p-2 border text-[10px] uppercase flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-20 disabled:pointer-events-none ${isVideoMenuOpen ? 'bg-white text-black border-white' : 'border-white/20 hover:bg-white hover:text-black'}`}
+          >
+            <Film size={12} /> MP4
           </button>
-          <button onClick={onCopyCSS} className="p-2 border border-white/20 text-[10px] uppercase flex flex-col items-center justify-center gap-1 hover:bg-white hover:text-black transition-colors">
-            <Code size={12} /> CSS
+
+          <button onClick={onShowCode} className="p-2 border border-white/20 text-[10px] uppercase flex flex-col items-center justify-center gap-1 hover:bg-white hover:text-black transition-colors">
+            <Code2 size={12} /> CODE
           </button>
         </div>
       </div>
