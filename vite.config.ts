@@ -3,6 +3,6 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  // Add this line below - use your exact repo name!
+  // This line is the key for GitHub Pages
   base: '/Cantarus-Web-App-Playground/', 
 })
